@@ -1,0 +1,55 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  user_id        String   @id @default(uuid()) @db.Char(36)
+  user_email     String   @unique @db.VarChar(255)
+  user_pw        String   @db.VarChar(255)
+  user_name      String   @db.VarChar(100)
+  user_nickname  String   @db.VarChar(50)
+  user_gender    Gender
+  user_birthday  DateTime
+  user_phone     String   @db.VarChar(20)
+  user_profile   String?  @db.VarChar(255)
+  user_social    String?  @db.VarChar(50)
+  user_role      Role
+  user_tier      Tier
+  user_status    Status
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Tier {
+  AMATEUR
+  SEMIPRO
+  PROFESSONAL
+  WOLRDCLASS
+  CHALLENGER
+  CHAMPIONS
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+  BANNED
+}
