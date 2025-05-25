@@ -17,7 +17,8 @@ body {
   background-repeat: no-repeat;
   background-size: 50%;
   background-position: center;
-  background-blend-mode: multiply;
+  background-blend-mode: soft-light;
+  opacity: 0.8;
   color: #ffffff;
 }
 
