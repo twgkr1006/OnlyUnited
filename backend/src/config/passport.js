@@ -99,13 +99,16 @@ passport.use(new KakaoStrategy({
 }, async (accessToken, refreshToken, profile, done) => {
     try {
         const nickname = profile.username || '카카오유저';
+        const email = `${profile.id}@kakao.com`; // 👈 가짜 이메일
 
-        let user = await prisma.user.findFirst({ where: { user_nickname: nickname } });
+        let user = await prisma.user.findUnique({
+            where: { user_email: email }
+        });
 
         if (!user) {
             user = await prisma.user.create({
                 data: {
-                    user_email: `${profile.id}@kakao.com`,
+                    user_email: email,
                     user_gender: 'MALE',
                     user_birthday: new Date('2000-01-01'),
                     user_phone: '000-0000-0000',
@@ -119,10 +122,12 @@ passport.use(new KakaoStrategy({
                 }
             });
         }
+
         return done(null, user);
     } catch (err) {
         return done(err);
     }
-}));  
+}));
+
 
 module.exports = passport;

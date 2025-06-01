@@ -24,6 +24,27 @@ const LoginPage: React.FC = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
+    // URL 파라미터 체크 및 소셜 로그인 처리
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        const userId = urlParams.get('user_id');
+        const phone = urlParams.get('phone');
+
+        if (token) {
+            // JWT 토큰이 있는 경우 - 정상적인 소셜 로그인
+            localStorage.setItem('token', token);
+            // axios 기본 설정에 토큰 추가
+            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            // 홈페이지로 리다이렉션
+            navigate('/');
+        } else if (userId && phone === '000-0000-0000') {
+            // 추가 정보가 필요한 경우
+            setUserId(userId);
+            setShowModal(true);
+        }
+    }, [navigate]);
+
     // 로그인 상태 체크
     useEffect(() => {
         axios.get('http://localhost:3001/api/user/me', {
@@ -36,28 +57,8 @@ const LoginPage: React.FC = () => {
         })
         .catch(() => {
             setUser(null);
-            // 에러 발생 시 (로그인되지 않은 상태) 아무 작업 안 함
         });
     }, [navigate]);
-
-    // /add-info?user_id=xxx 로 리디렉션된 경우 감지
-    useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const id = params.get('user_id');
-        const phone = params.get('phone');
-    
-        if (id) {
-            setUserId(id);
-            if (phone === '000-0000-0000') {
-                setShowModal(true);
-            } else {
-                // ✅ 정상 유저인 경우 바로 홈페이지로 이동
-                localStorage.setItem('user_id', id);  // 예: 저장 필요 시
-                localStorage.setItem('phone', phone || '');
-                window.location.href = '/';
-            }
-        }
-    }, []);
 
     const formatPhoneNumber = (value: string) => {
         const numbers = value.replace(/[^\d]/g, '');
@@ -90,12 +91,14 @@ const LoginPage: React.FC = () => {
         try {
             const response = await fetch('http://localhost:3001/api/user/add-info', {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}` // 토큰 추가
+                },
                 body: JSON.stringify({ user_id: userId, ...form }),
                 credentials: 'include',
             });
             
-            console.log('보낼 데이터:', { userId, ...form });
             if (!response.ok) {
                 throw new Error('요청 실패: ' + response.status);
             }
