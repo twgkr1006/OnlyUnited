@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Logo from '../components/Logo';
-import NextMatchesSection from '../components/NextMatchesSection';
+import MatchesSection from '../components/MatchesSection';
 import StandingSection from "../components/StandingSection";
 
 interface User {
@@ -38,7 +38,7 @@ const Home = () => {
                 <div className="grid grid-cols-3 gap-6">
                     {/* 경기 섹션 - 2/3 너비 */}
                     <div className="col-span-2 bg-[#545454] rounded-lg p-4">
-                        <NextMatchesSection />
+                        <MatchesSection />
                     </div>
 
                     {/* 오른쪽 섹션 - 1/3 너비 */}

@@ -4,7 +4,7 @@ import teamNameKoMap from '../constants/TeamNameKoMap';
 
 const MANCHESTER_UNITED_ID = 66;
 
-const NextMatchesSection = () => {
+const MatchesSection = () => {
   const [highlightMatch, setHighlightMatch] = useState<any>(null);
   const [upcomingMatches, setUpcomingMatches] = useState<any[]>([]);
   const [isUpcoming, setIsUpcoming] = useState(true);
@@ -206,4 +206,4 @@ const NextMatchesSection = () => {
   );
 };
 
-export default NextMatchesSection;
+export default MatchesSection;
