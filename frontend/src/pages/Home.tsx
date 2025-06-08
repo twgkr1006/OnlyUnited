@@ -2,6 +2,8 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Logo from '../components/Logo';
+import NextMatchesSection from '../components/NextMatchesSection';
+import StandingSection from "../components/StandingSection";
 
 interface User {
     user_profile_image?: string;
@@ -36,32 +38,7 @@ const Home = () => {
                 <div className="grid grid-cols-3 gap-6">
                     {/* 경기 섹션 - 2/3 너비 */}
                     <div className="col-span-2 bg-[#545454] rounded-lg p-4">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-lg text-white">경기</h2>
-                            <button className="text-gray-400 hover:text-white">
-                                <span>›</span>
-                            </button>
-                        </div>
-                        <div className="bg-[#2e2d2d] rounded-lg p-4">
-                            <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-3">
-                                    <img src="/team-logos/manutd.png" alt="맨유" className="w-8 h-8" />
-                                    <span className="text-white">맨유</span>
-                                </div>
-                                <span className="text-3xl font-bold text-white">3</span>
-                            </div>
-                            <div className="text-center text-gray-500 my-2">VS</div>
-                            <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-3">
-                                    <img src="/team-logos/southampton.png" alt="사우스햄튼" className="w-8 h-8" />
-                                    <span className="text-white">사우스햄튼</span>
-                                </div>
-                                <span className="text-3xl font-bold text-white">1</span>
-                            </div>
-                        </div>
-                        <button className="w-full mt-4 py-2 text-gray-400 hover:text-white bg-[#2e2d2d] rounded-lg text-sm">
-                            경기 더 보기 →
-                        </button>
+                        <NextMatchesSection />
                     </div>
 
                     {/* 오른쪽 섹션 - 1/3 너비 */}
@@ -151,29 +128,7 @@ const Home = () => {
                         </div>
 
                         {/* 순위 섹션 */}
-                        <div className="bg-[#545454] rounded-lg p-4">
-                            <div className="flex justify-between items-center mb-4">
-                                <h2 className="text-lg text-white">순위</h2>
-                                <button className="text-gray-400 hover:text-white">
-                                    <span>›</span>
-                                </button>
-                            </div>
-                            <div className="space-y-2">
-                                {[1, 2, 3, 4].map((rank) => (
-                                    <div key={rank} className="flex items-center justify-between bg-[#2e2d2d] p-3 rounded-lg">
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-gray-400 w-4">{rank}</span>
-                                            <img src={`/team-logos/team${rank}.png`} alt="팀 로고" className="w-6 h-6" />
-                                            <span className="text-white">팀 이름</span>
-                                        </div>
-                                        <span className="text-white">36</span>
-                                    </div>
-                                ))}
-                            </div>
-                            <button className="w-full mt-4 py-2 text-gray-400 hover:text-white bg-[#2e2d2d] rounded-lg text-sm">
-                                순위 더 보기 →
-                            </button>
-                        </div>
+                        <StandingSection />
                     </div>
                 </div>
             </div>
