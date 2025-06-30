@@ -26,6 +26,7 @@ const MatchesSection = () => {
     if (teamScore < opponentScore) return "패";
     return "무";
   };
+
   // 승패 색상 계산 함수
   const getResultColor = (result: "승" | "패" | "무" | null) => {
     switch (result) {
@@ -52,7 +53,7 @@ const MatchesSection = () => {
   const isSingleLineName = (name: string) => {
     return name.trim().split(' ').length === 1;
   };
-
+  
   useEffect(() => {
     const fetchMatches = async () => {
       try {
@@ -94,7 +95,7 @@ const MatchesSection = () => {
   const { homeTeam, awayTeam, utcDate, score } = highlightMatch;
   const mainResult = !isUpcoming ? getMatchResult(highlightMatch, MANCHESTER_UNITED_ID) : null;
 
-  const renderTeamLeft = (team: any) => {
+  const leftHomeTeam = (team: any) => {
     return (
       <div className="flex flex-col items-start w-100">
         <div className="flex items-center gap-4">
@@ -107,7 +108,7 @@ const MatchesSection = () => {
     );
   };
   
-  const renderTeamRight = (team: any) => {
+  const rightAwayTeam = (team: any) => {
     return (
       <div className="flex flex-col items-end w-100">
         <div className="flex items-center gap-4 justify-end mr-2">
@@ -120,7 +121,7 @@ const MatchesSection = () => {
     );
   };
 
-  const renderTeamLeftSmall = (team: any, match: any) => {
+  const homeTeamSmall = (team: any, match: any) => {
     return (
       <div className="flex flex-col items-start w-36">
         <div className="flex items-center gap-3">
@@ -137,7 +138,7 @@ const MatchesSection = () => {
     );
   };
   
-  const renderTeamRightSmall = (team: any, match: any) => {
+  const awayTeamSmall = (team: any, match: any) => {
     return (
       <div className="flex flex-col items-end w-36">
         <div className="flex items-center gap-3 justify-end">
@@ -160,7 +161,7 @@ const MatchesSection = () => {
       <div className="bg-[#2e2d2d] rounded-lg shadow text-center pt-8 pb-8">
         <h2 className="text-3xl font-bold mb-2">최근 경기</h2>
         <div className="flex justify-between items-center gap-2 mb-4">
-          {renderTeamLeft(homeTeam)}
+          {leftHomeTeam(homeTeam)}
           <div className="text-center">
             <div className="text-gray-400 text-sm mb-2">{formatDate(utcDate)}</div>
             <div className="text-7xl font-extrabold tracking-wider">
@@ -170,7 +171,7 @@ const MatchesSection = () => {
               {mainResult}
             </div>
           </div>
-          {renderTeamRight(awayTeam)}
+          {rightAwayTeam(awayTeam)}
         </div>
       </div>
 
@@ -184,7 +185,7 @@ const MatchesSection = () => {
             <div key={match.id} className="bg-[#2e2d2d] pt-4 pb-4 rounded-lg shadow text-sm space-y-2">
               <div className="text-center text-gray-400 text-xs">{formatDate(match.utcDate)}</div>
               <div className="flex justify-center items-center gap-10">
-                {renderTeamLeftSmall(match.homeTeam, match)}
+                {homeTeamSmall(match.homeTeam, match)}
                 <div className="text-center">
                   <div className="text-2xl font-semibold">
                     {isUpcoming ? 'VS' : `${home} : ${away}`}
@@ -195,7 +196,7 @@ const MatchesSection = () => {
                     </div>
                   )}
                 </div>
-                {renderTeamRightSmall(match.awayTeam, match)}
+                {awayTeamSmall(match.awayTeam, match)}
               </div>
               
             </div>
