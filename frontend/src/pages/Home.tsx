@@ -139,6 +139,21 @@ const Home = () => {
                 </div>
             </div>
 
+            {/* 퀵 네비게이션 */}
+            <div className="container mx-auto px-4 mt-4">
+                <div className="bg-[#545454] rounded-lg p-4">
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <span className="text-gray-400 text-sm">바로가기</span>
+                        <button
+                            onClick={() => navigate('/squad')}
+                            className="px-5 py-2 bg-[#2e2d2d] text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                        >
+                            선수단
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             {/* 카피라이트 */}
             <div className="text-center text-gray-500 text-sm mt-8 pb-4">
                 © OnlyUnited All Rights Reserved.

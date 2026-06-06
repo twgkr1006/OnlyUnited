@@ -1,4 +1,5 @@
 require('dotenv').config();
+
 const express = require('express');
 const session = require('express-session');
 const passport = require('./config/passport');
@@ -9,9 +10,12 @@ const emailRouter = require('./routes/email');
 const matchRoutes = require('./routes/match');
 const standingRouter = require('./routes/standing');
 const newsRoute = require('./routes/news');
+const playerRoutes = require("./routes/playerRoutes");
+
 require('./jobs/matchSyncJob');
 require('./jobs/standingSyncJob');
 require('./jobs/newsSyncJob'); 
+require('./jobs/playerSyncJob');
 
 const cors = require('cors');
 const app = express();
@@ -43,6 +47,7 @@ app.use('/email', emailRouter);
 app.use('/api/scheduled-matches', matchRoutes);
 app.use('/api/standings', standingRouter);
 app.use('/api/news', newsRoute);
+app.use("/api/players", playerRoutes);
 
 app.get('/', (req, res) => {
     res.send('server running!');
