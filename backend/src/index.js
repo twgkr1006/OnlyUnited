@@ -21,20 +21,7 @@ require('./jobs/playerSyncJob');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors({
-    origin: (origin, callback) => {
-        if (!origin) return callback(null, true);
-        // localhost 개발 환경
-        if (/^http:\/\/localhost:\d+$/.test(origin)) return callback(null, true);
-        // Vercel 배포 도메인
-        if (/\.vercel\.app$/.test(origin)) return callback(null, true);
-        // 환경변수로 지정된 프론트엔드 도메인
-        const allowed = process.env.FRONTEND_URL;
-        if (allowed && origin === allowed) return callback(null, true);
-        callback(new Error('Not allowed by CORS'));
-    },
-    credentials: true
-}));
+app.use(cors({ origin: true, credentials: true }));
 
 app.use(express.json());
 
