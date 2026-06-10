@@ -283,4 +283,19 @@ router.delete('/:id/comments/:cid', async (req, res) => {
     }
 });
 
+// POST /api/board/seed - 더미 게시글 씨드 (최초 1회)
+router.post('/seed', async (req, res) => {
+    try {
+        const count = await prisma.post.count();
+        if (count > 20) {
+            return res.json({ ok: true, message: `이미 ${count}건 존재, 씨드 건너뜀` });
+        }
+        const { seed } = require('../scripts/seedPosts');
+        const created = await seed();
+        res.json({ ok: true, created });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;
