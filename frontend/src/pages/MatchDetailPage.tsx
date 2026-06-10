@@ -278,7 +278,7 @@ const MatchDetailPage = () => {
     const [ratingsMap, setRatingsMap] = useState<RatingsMap>({});
     const [highlights, setHighlights] = useState<Highlight[]>([]);
     const [hlLoading, setHlLoading] = useState(false);
-    const [hlSource, setHlSource] = useState<string>('');
+    const [, setHlSource] = useState<string>('');
     const [hlVideoInput, setHlVideoInput] = useState('');
     const [hlAdding, setHlAdding] = useState(false);
     const [activeHl, setActiveHl] = useState<number>(0);
@@ -372,8 +372,8 @@ const MatchDetailPage = () => {
 
     // 경기 이벤트 — 맨유 ESPN ID 기준
     const events = espn?.events ?? [];
-    const manUtdEvents = events.filter(e => e.teamId === MAN_UTD_ESPN_ID);
-    const oppEvents    = events.filter(e => e.teamId !== MAN_UTD_ESPN_ID);
+    const _manUtdEvents = events.filter(e => e.teamId === MAN_UTD_ESPN_ID);
+    const _oppEvents    = events.filter(e => e.teamId !== MAN_UTD_ESPN_ID);
 
     return (
         <div className="min-h-screen bg-[#1e1e1e] text-white">

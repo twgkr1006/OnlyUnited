@@ -25,7 +25,7 @@ const CATEGORY_LABELS: Record<string, string> = {
     FREE: '자유', MATCH: '경기', PLAYER: '선수', TRANSFER: '이적', HUMOR: '유머',
 };
 
-function timeAgo(iso: string) {
+function _timeAgo(iso: string) {
     const diff = Date.now() - new Date(iso).getTime();
     const m = Math.floor(diff / 60000);
     if (m < 60) return `${m}분 전`;

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 // ── 역대 기록 데이터 ──────────────────────────────────────────────────────────
 const TOP_APPEARANCES = [
@@ -185,7 +184,6 @@ type RecordTab = typeof RECORD_TABS[number];
 
 export default function LegendsPage() {
     const [tab, setTab] = useState<RecordTab>('전설 선수');
-    const navigate = useNavigate();
 
     return (
         <div className="min-h-screen bg-[#1a1a1a] text-white pb-20">
