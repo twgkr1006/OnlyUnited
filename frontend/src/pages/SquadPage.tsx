@@ -3,11 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Logo from '../components/Logo';
 
+// 선수 API-Football ID → 상세 페이지 라우트 param
+// SquadPage PlayerCard에서 사용
+
 interface Player {
     id: number;
+    playerId: number;
     name: string;
     age: number;
     number: number;
+    shirtNumber?: number;
     position: string;
     photo: string;
     nationality?: string;
@@ -59,6 +64,7 @@ const filterTabs = [
 
 // ─── PlayerCard ────────────────────────────────────────────────────────────
 const PlayerCard = ({ player }: { player: Player }) => {
+    const navigate = useNavigate();
     const [imgError, setImgError] = useState(false);
     const positionKo = positionKoMap[player.position] || player.position;
     const positionColor = positionColorMap[player.position] || 'bg-gray-600 text-gray-100';
@@ -68,13 +74,16 @@ const PlayerCard = ({ player }: { player: Player }) => {
         player.appearances != null || player.goals != null || player.assists != null;
 
     return (
-        <div className="bg-[#2e2d2d] rounded-lg overflow-hidden hover:bg-[#3a3939] transition-colors cursor-pointer">
+        <div
+            className="bg-[#2e2d2d] rounded-lg overflow-hidden hover:bg-[#3a3939] transition-colors cursor-pointer"
+            onClick={() => navigate(`/squad/${player.playerId}`)}
+        >
             {/* 사진 영역 */}
             <div className="relative bg-[#1a1a1a] flex justify-center items-end" style={{ height: '160px' }}>
                 {/* 등번호 */}
-                {player.number != null && (
+                {(player.shirtNumber ?? player.number) != null && (
                     <div className="absolute top-2 left-3 bg-red-700 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center z-10">
-                        {player.number}
+                        {player.shirtNumber ?? player.number}
                     </div>
                 )}
                 {/* 포지션 */}
@@ -151,7 +160,7 @@ const SquadPage = () => {
         const fetchSquad = async () => {
             try {
                 setLoading(true);
-                const res = await axios.get('http://localhost:3001/api/squad');
+                const res = await axios.get('/api/squad');
                 console.log('선수단 데이터:', res.data);
 
                 const squad =
@@ -243,9 +252,17 @@ const SquadPage = () => {
                                 {tab.label}
                             </button>
                         ))}
-                        <span className="ml-auto text-gray-400 text-sm">
-                            {loading ? '...' : `${sortedPlayers.length}명`}
-                        </span>
+                        <div className="ml-auto flex items-center gap-3">
+                            <button
+                                onClick={() => navigate('/compare')}
+                                className="flex items-center gap-1.5 bg-[#2e2d2d] hover:bg-[#3e3d3d] text-gray-300 hover:text-white text-xs px-3 py-1.5 rounded-lg transition-colors"
+                            >
+                                ⚖️ 선수 비교
+                            </button>
+                            <span className="text-gray-400 text-sm">
+                                {loading ? '...' : `${sortedPlayers.length}명`}
+                            </span>
+                        </div>
                     </div>
                 </div>
 

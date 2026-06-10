@@ -1,29 +1,16 @@
-const { prisma } = require('../prisma');
+const prisma = require('../prisma');
 
 async function upsertTeamStanding(team) {
     const {
-        teamId,
-        name,
-        crest,
-        position,
-        points
+        teamId, season, name, crest,
+        position, played, won, draw, lost,
+        goalsFor, goalsAgainst, goalDiff, points, form
     } = team;
 
     return await prisma.teamStanding.upsert({
-        where: { teamId },
-        update: {
-            name,
-            crest,
-            position,
-            points
-        },
-        create: {
-            teamId,
-            name,
-            crest,
-            position,
-            points
-        }
+        where: { teamId_season: { teamId, season } },
+        update: { name, crest, position, played, won, draw, lost, goalsFor, goalsAgainst, goalDiff, points, form },
+        create: { teamId, season, name, crest, position, played, won, draw, lost, goalsFor, goalsAgainst, goalDiff, points, form }
     });
 }
 

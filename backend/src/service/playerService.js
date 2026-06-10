@@ -1,87 +1,155 @@
-// src/service/playerService.js
 const axios = require('axios');
-const prisma = require('../lib/prisma'); // 경로는 프로젝트 기준
+const prisma = require('../prisma');
+const shirtNumberMap = require('../data/manutdShirtNumbers.json').numbers;
 
-const TEAM_ID = 33; // Man United
-const API_KEY = process.env.API_FOOTBALL_KEY; // *.env 확인!
+// football-data.org: Man United = 66
+const FD_TEAM_ID = 66;
+const FD_BASE = 'https://api.football-data.org/v4';
 
-// 1) 스쿼드 가져오기: 무조건 배열 반환
-async function fetchManUtdSquad() {
-    const headers = { 'x-apisports-key': API_KEY };
+// api-sports.io (API-Football): Man United = 33
+const AF_TEAM_ID = 33;
+const AF_BASE = 'https://v3.football.api-sports.io';
 
-    // 우선 squads 엔드포인트 시도 (현재 스쿼드)
+function fdHeaders() {
+    return { 'X-Auth-Token': process.env.FOOTBALL_DATA_KEY };
+}
+function afHeaders() {
+    return { 'x-apisports-key': process.env.API_FOOTBALL_KEY };
+}
+
+// ── API-Football에서 선수 목록 가져오기 (사진 + 등번호 포함) ────────────────
+async function fetchFromApiFootball() {
+    if (!process.env.API_FOOTBALL_KEY) return null;
     try {
-        const { data } = await axios.get(
-            `https://v3.football.api-sports.io/players/squads?team=${TEAM_ID}`,
-            { headers }
-        );
-        const arr = data?.response?.[0]?.players ?? [];
-        if (Array.isArray(arr) && arr.length > 0) return arr; // 성공적으로 배열
+        const { data } = await axios.get(`${AF_BASE}/players/squads`, {
+            headers: afHeaders(),
+            params: { team: AF_TEAM_ID },
+            timeout: 10000,
+        });
+        const players = data?.response?.[0]?.players ?? [];
+        if (players.length > 0) {
+            console.log(`[PLAYER SYNC] API-Football에서 ${players.length}명 수신`);
+            return players; // { id, name, age, number, position, photo }
+        }
+        return null;
     } catch (e) {
-        console.warn('[PLAYER SYNC] squads 호출 실패 → players로 폴백:', e?.response?.status, e?.message);
+        console.warn('[PLAYER SYNC] API-Football 실패:', e?.response?.status, e?.message);
+        return null;
     }
+}
 
-    // 폴백: 시즌별 players
+// ── football-data.org에서 선수 목록 가져오기 (기본 정보만) ──────────────────
+async function fetchFromFootballData() {
     try {
-        const season = new Date().getFullYear(); // 2025 시즌 등
-        const { data } = await axios.get(
-            `https://v3.football.api-sports.io/players`,
-            { headers, params: { team: TEAM_ID, season } }
-        );
-        // players 엔드포인트는 response가 [{ player, statistics }, ...]
-        const arr = data?.response ?? [];
-        return Array.isArray(arr) ? arr : [];
+        const { data } = await axios.get(`${FD_BASE}/teams/${FD_TEAM_ID}`, {
+            headers: fdHeaders(),
+            timeout: 10000,
+        });
+        const squad = data?.squad ?? [];
+        if (squad.length > 0) {
+            console.log(`[PLAYER SYNC] football-data.org에서 ${squad.length}명 수신`);
+        }
+        return squad; // { id, name, position, dateOfBirth, nationality }
     } catch (e) {
-        console.error('[PLAYER SYNC] players 호출도 실패:', e?.response?.status, e?.message);
+        console.error('[PLAYER SYNC] football-data.org 실패:', e?.response?.status, e?.message);
         return [];
     }
 }
 
-// 2) DB upsert: 모양 차이 흡수해서 매핑
+// ── 두 소스를 합쳐서 DB에 저장 ───────────────────────────────────────────────
 async function syncManUtdSquadToDB() {
-    const raw = await fetchManUtdSquad();
+    // 1) API-Football 우선 시도
+    const afPlayers = await fetchFromApiFootball();
 
-    if (!Array.isArray(raw)) {
-        console.error('[PLAYER SYNC] fetchManUtdSquad()가 배열이 아님. 값:', raw);
-        return;
-    }
-    console.log(`[PLAYER SYNC] 동기화 대상 ${raw.length}명`);
+    if (afPlayers && afPlayers.length > 0) {
+        // API-Football 응답만으로 처리 (사진 + 등번호 포함)
+        let count = 0;
+        for (const p of afPlayers) {
+            const pid = p.id;
+            const name = p.name;
+            if (!pid || !name) continue;
 
-    for (const item of raw) {
-        // 두 응답 케이스를 모두 처리
-        const pid = item.id ?? item.player?.id;
-        const name = item.name ?? item.player?.name;
-        const first = item.firstname ?? item.player?.firstname ?? null;
-        const last = item.lastname ?? item.player?.lastname ?? null;
-        const nat = item.nationality ?? item.player?.nationality ?? null;
-        const bdateStr = item.birth?.date ?? item.player?.birth?.date ?? null;
-        const bdate = bdateStr ? new Date(bdateStr) : null;
-        const pos = item.position ?? item.statistics?.[0]?.games?.position ?? null;
-        const photo = item.photo ?? item.player?.photo ?? null;
+            const bdate = p.birth?.date ? new Date(p.birth.date) : null;
+            const age = p.age != null ? Number(p.age)
+                : (bdate ? Math.floor((Date.now() - bdate.getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null);
 
-        if (!pid || !name) {
-            console.warn('[PLAYER SYNC] 필수 필드 없음 → 스킵:', { pid, name });
-            continue;
+            await prisma.player.upsert({
+                where: { playerId: Number(pid) },
+                update: {
+                    name,
+                    age,
+                    shirtNumber: p.number != null ? Number(p.number) : null,
+                    nationality: p.nationality ?? null,
+                    birthDate: bdate,
+                    position: p.position ?? null,
+                    photo: p.photo ?? null,
+                },
+                create: {
+                    playerId: Number(pid),
+                    name,
+                    firstname: null,
+                    lastname: null,
+                    age,
+                    shirtNumber: p.number != null ? Number(p.number) : null,
+                    nationality: p.nationality ?? null,
+                    birthDate: bdate,
+                    position: p.position ?? null,
+                    photo: p.photo ?? null,
+                },
+            });
+            count++;
         }
+        console.log(`✅ 선수 동기화 완료 (API-Football): ${count}명`);
+        return count;
+    }
 
-        const baseData = {
-            name,
-            ...(first ? { firstname: first } : {}),
-            ...(last ? { lastname: last } : {}),
-            nationality: nat ?? null,
-            birthDate: bdate,
-            position: pos ?? null,
-            photo: photo ?? null,
-        };
+    // 2) fallback: football-data.org (사진 없음)
+    const fdSquad = await fetchFromFootballData();
+    console.log(`[PLAYER SYNC] 동기화 대상 ${fdSquad.length}명`);
+
+    let count = 0;
+    for (const item of fdSquad) {
+        const pid = item.id;
+        const name = item.name;
+        if (!pid || !name) continue;
+
+        const bdate = item.dateOfBirth ? new Date(item.dateOfBirth) : null;
+        const age = bdate
+            ? Math.floor((Date.now() - bdate.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+            : null;
+
+        const shirtNumber = item.shirtNumber != null
+            ? Number(item.shirtNumber)
+            : (shirtNumberMap[String(pid)] ?? null);
 
         await prisma.player.upsert({
             where: { playerId: Number(pid) },
-            update: baseData,
-            create: { playerId: Number(pid), ...baseData },
+            update: {
+                name,
+                age,
+                shirtNumber,
+                nationality: item.nationality ?? null,
+                birthDate: bdate,
+                position: item.position ?? null,
+                // 기존에 사진이 있으면 덮어쓰지 않음
+            },
+            create: {
+                playerId: Number(pid),
+                name,
+                firstname: null,
+                lastname: null,
+                age,
+                shirtNumber,
+                nationality: item.nationality ?? null,
+                birthDate: bdate,
+                position: item.position ?? null,
+                photo: null,
+            },
         });
+        count++;
     }
-
-    console.log('✅ 선수 동기화 완료');
+    console.log(`✅ 선수 동기화 완료 (football-data.org): ${count}명`);
+    return count;
 }
 
-module.exports = { fetchManUtdSquad, syncManUtdSquadToDB };
+module.exports = { syncManUtdSquadToDB };

@@ -64,18 +64,31 @@ model Match {
   awayTeamId   Int?
   status       String
   competition  String
+  homeScore    Int?
+  awayScore    Int?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
 
 model TeamStanding {
-  id        Int      @id @default(autoincrement())
-  teamId    Int      @unique
-  name      String
-  crest     String
-  position  Int
-  points    Int
-  updatedAt DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  teamId       Int
+  season       Int      @default(2025)
+  name         String
+  crest        String
+  position     Int
+  played       Int      @default(0)
+  won          Int      @default(0)
+  draw         Int      @default(0)
+  lost         Int      @default(0)
+  goalsFor     Int      @default(0)
+  goalsAgainst Int      @default(0)
+  goalDiff     Int      @default(0)
+  points       Int
+  form         String?
+  updatedAt    DateTime @updatedAt
+
+  @@unique([teamId, season])
 }
 
 model News {
@@ -91,16 +104,142 @@ model News {
   updatedAt      DateTime @updatedAt
 }
 
+model MatchDetail {
+  id             Int      @id @default(autoincrement())
+  matchId        String   @unique
+  goalsJson      String?  @db.Text
+  bookingsJson   String?  @db.Text
+  statsJson      String?  @db.Text
+  ratingsJson    String?  @db.Text
+  highlightsJson String?  @db.Text
+  fetchedAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
 model Player {
   id          Int       @id @default(autoincrement())
-  playerId    Int       @unique            // API-FOOTBALL player id
+  playerId    Int       @unique
   name        String
   firstname   String?
   lastname    String?
+  age         Int?
+  shirtNumber Int?
   nationality String?
   birthDate   DateTime?
   position    String?
   photo       String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+}
+
+model PlayerStats {
+  id          Int      @id @default(autoincrement())
+  playerId    Int      @unique
+  season      Int      @default(2024)
+  statsJson   String?  @db.Text
+  fetchedAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Post {
+  id        Int       @id @default(autoincrement())
+  title     String    @db.VarChar(200)
+  content   String    @db.Text
+  nickname  String    @db.VarChar(50)
+  authorId  String?   @db.VarChar(36)
+  category  String    @default("FREE") @db.VarChar(20)
+  views     Int       @default(0)
+  likes     Int       @default(0)
+  isPinned  Boolean   @default(false)
+  hasPoll   Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  comments  Comment[]
+  postLikes PostLike[]
+  poll      Poll?
+}
+
+model Poll {
+  id         Int          @id @default(autoincrement())
+  postId     Int          @unique
+  post       Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  question   String       @db.VarChar(300)
+  endsAt     DateTime?
+  totalVotes Int          @default(0)
+  createdAt  DateTime     @default(now())
+  options    PollOption[]
+  votes      PollVote[]
+}
+
+model PollOption {
+  id        Int        @id @default(autoincrement())
+  pollId    Int
+  poll      Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  text      String     @db.VarChar(200)
+  voteCount Int        @default(0)
+  votes     PollVote[]
+}
+
+model PollVote {
+  id        Int        @id @default(autoincrement())
+  pollId    Int
+  poll      Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  optionId  Int
+  option    PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  clientId  String     @db.VarChar(100)
+  createdAt DateTime   @default(now())
+
+  @@unique([pollId, clientId])
+}
+
+model MatchRating {
+  id          Int      @id @default(autoincrement())
+  matchId     String   @db.VarChar(50)
+  playerName  String   @db.VarChar(100)
+  clientId    String   @db.VarChar(100)
+  rating      Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([matchId, playerName, clientId])
+  @@index([matchId])
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  content   String   @db.Text
+  nickname  String   @db.VarChar(50)
+  authorId  String?  @db.VarChar(36)
+  likes     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model PostLike {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  clientId  String   @db.VarChar(100)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, clientId])
+}
+
+model TransferNews {
+  id          Int      @id @default(autoincrement())
+  guid        String   @unique @db.VarChar(500)
+  title       String   @db.VarChar(500)
+  titleKo     String?  @db.VarChar(500)
+  summary     String?  @db.Text
+  summaryKo   String?  @db.Text
+  link        String   @db.VarChar(500)
+  source      String   @db.VarChar(100)
+  pubDate     DateTime
+  imageUrl    String?  @db.VarChar(500)
+  isTransfer  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([pubDate(sort: Desc)])
+  @@index([isTransfer])
 }

@@ -1,20 +1,11 @@
 const express = require('express');
 const router = express.Router();
 
-const { signup, login, updateUserInfo } = require('../controllers/userController');
-
-const authMiddleware = require('../middlewares/authMiddleware');
+const { signup, login, getMe, updateUserInfo } = require('../controllers/userController');
 
 router.post('/signup', signup);
 router.post('/login', login);
-
-router.get('/me', authMiddleware, (req, res) => {
-    res.json({
-        message: 'Token Authentication Successful.',
-        user: req.user,
-    });
-});
-
+router.get('/me', getMe);
 router.patch('/add-info', updateUserInfo);
 
 module.exports = router;

@@ -1,212 +1,197 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import teamNameKoMap from '../constants/TeamNameKoMap';
 
-const MANCHESTER_UNITED_ID = 66;
+const MAN_UTD_ID = 66;
 
-// 팀 정보 매핑 함수
-const getTeamInfo = (teamId: number, teamName: string) => {
-  const name = teamNameKoMap[teamId] || teamName;
-  const crest = `https://crests.football-data.org/${teamId}.png`;
-  return { name, crest };
+const VENUE_MAP: Record<number, string> = {
+  57:  'Emirates Stadium',       // Arsenal
+  58:  'Villa Park',             // Aston Villa
+  61:  'Stamford Bridge',        // Chelsea
+  62:  'Selhurst Palace',        // Crystal Palace
+  63:  'Goodison Park',          // Everton
+  64:  'Anfield',                // Liverpool
+  65:  'Etihad Stadium',         // Man City
+  66:  'Old Trafford',           // Man United
+  67:  "St. James' Park",        // Newcastle
+  73:  'Tottenham Hotspur Stadium',
+  328: 'Falmer Stadium',         // Brighton
+  340: 'Molineux Stadium',       // Wolves
+  354: 'Bramall Lane',           // Sheffield Utd
+  356: 'The Hawthorns',          // West Brom
+  397: 'Amex Stadium',           // Brighton (alt)
+  402: 'Portman Road',           // Ipswich
+  537: 'Brentford Community Stadium',
+  563: 'London Stadium',         // West Ham
+  610: 'Elland Road',            // Leeds
+  715: 'Dean Court',             // Bournemouth
+  741: 'Nottingham Forest',      // NFFC
+  770: 'Fulham FC',              // Fulham
+  1044:'Luton Town',             // Luton
+  76:  'King Power Stadium',     // Leicester
+  346: 'Burnley FC',
 };
 
+const getVenue = (homeTeamId: number) => VENUE_MAP[homeTeamId] ?? null;
+
+interface Match {
+  id: string;
+  utcDate: string;
+  homeTeam: string;
+  homeTeamId: number;
+  awayTeam: string;
+  awayTeamId: number;
+  status: string;
+  competition: string;
+  homeScore: number | null;
+  awayScore: number | null;
+}
+
+const getTeamInfo = (id: number, name: string) => ({
+  name: teamNameKoMap[id] || name,
+  crest: `https://crests.football-data.org/${id}.png`,
+});
+
+const formatDate = (d: string) => {
+  const dt = new Date(d);
+  return `${dt.getMonth() + 1}월 ${dt.getDate()}일`;
+};
+
+const getResult = (m: Match): '승' | '패' | '무' | null => {
+  if (m.homeScore == null || m.awayScore == null) return null;
+  const isHome = m.homeTeamId === MAN_UTD_ID;
+  const my = isHome ? m.homeScore : m.awayScore;
+  const op = isHome ? m.awayScore : m.homeScore;
+  return my > op ? '승' : my < op ? '패' : '무';
+};
+
+const resultColor = (r: string | null) =>
+  r === '승' ? 'text-green-400' : r === '패' ? 'text-red-400' : r === '무' ? 'text-yellow-400' : '';
+
 const MatchesSection = () => {
-  const [highlightMatch, setHighlightMatch] = useState<any>(null);
-  const [upcomingMatches, setUpcomingMatches] = useState<any[]>([]);
-  const [isUpcoming, setIsUpcoming] = useState(true);
+  const navigate = useNavigate();
+  const [highlight, setHighlight] = useState<Match | null>(null);
+  const [others, setOthers] = useState<Match[]>([]);
 
-  // 날짜 포맷팅 함수
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return `${date.getMonth() + 1}월 ${date.getDate()}일`;
-  };
-
-  // 경기가 예정인지 완료인지 판단하는 함수
-  const isMatchScheduled = (utcDate: string) => {
-    const matchDate = new Date(utcDate);
-    const now = new Date();
-    return matchDate > now;
-  };
-
-  // 승패 계산 함수
-  const getMatchResult = (match: any, teamId: number): "승" | "패" | "무" | null => {
-    if (!match.score.fullTime) return null;
-    const { home, away } = match.score.fullTime;
-    const isHome = match.homeTeam.id === teamId;
-    const teamScore = isHome ? home : away;
-    const opponentScore = isHome ? away : home;
-    if (teamScore > opponentScore) return "승";
-    if (teamScore < opponentScore) return "패";
-    return "무";
-  };
-
-  // 승패 색상 계산 함수
-  const getResultColor = (result: "승" | "패" | "무" | null) => {
-    switch (result) {
-      case "승":
-        return "text-green-400";
-      case "패":
-        return "text-red-400";
-      case "무":
-        return "text-yellow-400";
-      default:
-        return "text-gray-400";
-    }
-  };
-
-  // 팀 이름 두 줄로 포맷팅 함수
-  const formatTeamNameTwoLines = (name: string) => {
-    if (!name) return '';
-    const parts = name.trim().split(' ');
-    if (parts.length === 1) return parts[0]; // 단어 1개면 그대로
-    if (parts.length === 2) return `${parts[0]}\n${parts[1]}`; // 2단어는 딱 두 줄
-    return `${parts.slice(0, 2).join(' ')}\n${parts.slice(2).join(' ')}`; // 3단어 이상 처리
-  };
-
-  // 팀 이름이 한 줄인지 체크 후 띄울 줄 조정
-  const isSingleLineName = (name: string) => {
-    if (!name) return true;
-    return name.trim().split(' ').length === 1;
-  };
-  
   useEffect(() => {
-    const fetchMatches = async () => {
-      try {
-        const res = await axios.get('http://localhost:3001/api/scheduled-matches');
-        console.log('경기일정 데이터:', res.data);
-        const matches = res.data.matches || [];
-
-        if (matches.length > 0) {
-          setHighlightMatch(matches[0]);
-          setUpcomingMatches(matches.slice(1, 5));
+    axios.get('/api/matches')
+      .then(res => {
+        const list: Match[] = res.data.matches ?? [];
+        if (list.length > 0) {
+          setHighlight(list[0]);
+          setOthers(list.slice(1, 7));
         }
-      } catch (err) {
-        console.error('❌ 경기 데이터 가져오기 실패:', err);
-      }
-    };
-
-    fetchMatches();
+      })
+      .catch(console.error);
   }, []);
 
-  if (!highlightMatch) return null;
+  if (!highlight) return (
+    <div className="text-center py-16 text-gray-400">
+      <p className="text-lg">경기 일정을 불러오는 중입니다.</p>
+      <p className="text-sm mt-2">잠시 후 다시 시도해주세요.</p>
+    </div>
+  );
 
-  const { homeTeam, awayTeam, homeTeamId, awayTeamId, utcDate, score } = highlightMatch;
-  const isHighlightScheduled = isMatchScheduled(utcDate);
-  const mainResult = null;
+  const isUpcoming = highlight.status === 'TIMED' || highlight.status === 'SCHEDULED';
+  const homeInfo = getTeamInfo(highlight.homeTeamId, highlight.homeTeam);
+  const awayInfo = getTeamInfo(highlight.awayTeamId, highlight.awayTeam);
+  const mainResult = getResult(highlight);
 
-  const leftHomeTeam = (teamId: number, teamName: string) => {
-    const info = getTeamInfo(teamId, teamName);
-    return (
-      <div className="flex flex-col items-start w-100">
-        <div className="flex items-center gap-4">
-          <img src={info.crest} className="w-32 h-32 object-contain ml-2" />
-          <span className="text-2xl font-bold whitespace-pre-line leading-tight text-center">
-            {formatTeamNameTwoLines(info.name)}
-          </span>
-        </div>
-      </div>
-    );
-  };
-  
-  const rightAwayTeam = (teamId: number, teamName: string) => {
-    const info = getTeamInfo(teamId, teamName);
-    return (
-      <div className="flex flex-col items-end w-100">
-        <div className="flex items-center gap-4 justify-end mr-2">
-          <span className="text-2xl font-bold whitespace-pre-line leading-tight text-center">
-            {formatTeamNameTwoLines(info.name)}
-          </span>
-          <img src={info.crest} className="w-32 h-32 object-contain mr-2" />
-        </div>
-      </div>
-    );
-  };
-
-  const homeTeamSmall = (teamId: number, teamName: string) => {
-    const info = getTeamInfo(teamId, teamName);
-    return (
-      <div className="flex flex-col items-start w-36">
-        <div className="flex items-center gap-3">
-          <img src={info.crest} className="w-10 h-10 object-contain" />
-          <span
-            className={`text-sm whitespace-pre-line leading-tight text-center${
-              isSingleLineName(info.name) ? 'my-2' : ''
-            }`}
-          >
-            {formatTeamNameTwoLines(info.name)}
-          </span>
-        </div>
-      </div>
-    );
-  };
-  
-  const awayTeamSmall = (teamId: number, teamName: string) => {
-    const info = getTeamInfo(teamId, teamName);
-    return (
-      <div className="flex flex-col items-end w-36">
-        <div className="flex items-center gap-3 justify-end">
-          <span
-            className={`text-sm text-center whitespace-pre-line leading-tight ${
-              isSingleLineName(info.name) ? 'my-2' : ''
-            }`}
-          >
-            {formatTeamNameTwoLines(info.name)}
-          </span>
-          <img src={info.crest} className="w-10 h-10 object-contain" />
-        </div>
-      </div>
-    );
-  };
-  
   return (
-    <div className="text-white space-y-8">
-      {/* ✅ 상단 하이라이트 경기 */}
-      <div className="bg-[#2e2d2d] rounded-lg shadow text-center pt-8 pb-8">
-        <h2 className="text-3xl font-bold mb-2 item-center">{isHighlightScheduled ? '다음 경기' : '최근 경기'}</h2>
-        <div className="flex justify-between items-center gap-2 mb-4">
-          {leftHomeTeam(homeTeamId, homeTeam)}
-          <div className="text-center">
-            <div className="text-gray-400 text-sm mb-2">{formatDate(utcDate)}</div>
-            <div className="text-7xl font-extrabold tracking-wider">
-              VS
-            </div>
-            <div className={`text-xl font-bold mt-2 ${getResultColor(mainResult)}`}>
-              {mainResult}
-            </div>
+    <div className="text-white space-y-4">
+      {/* 하이라이트 경기 */}
+      <div
+        className="bg-[#2e2d2d] rounded-lg shadow text-center pt-8 pb-6 cursor-pointer hover:bg-[#3a3939] transition-colors"
+        onClick={() => navigate(`/matches/${highlight.id}`)}
+      >
+        <h2 className="text-2xl font-bold mb-4">{isUpcoming ? '다음 경기' : '최근 경기'}</h2>
+        <div className="text-gray-400 text-sm mb-4">{formatDate(highlight.utcDate)}</div>
+        <div className="flex justify-between items-center px-6">
+          {/* 홈팀 */}
+          <div className="flex items-center gap-4 flex-1">
+            <img src={homeInfo.crest} className="w-20 h-20 object-contain" onError={e => { e.currentTarget.style.opacity = '0.3'; }} />
+            <span className="text-xl font-bold">{homeInfo.name}</span>
           </div>
-          {rightAwayTeam(awayTeamId, awayTeam)}
+          {/* 스코어 or VS */}
+          <div className="text-center px-4">
+            {(() => {
+              const venue = getVenue(highlight.homeTeamId);
+              return venue ? (
+                <div className="text-[11px] text-gray-500 mb-1 tracking-wide">{venue}</div>
+              ) : null;
+            })()}
+            {isUpcoming ? (
+              <span className="text-6xl font-extrabold tracking-wider text-gray-200">VS</span>
+            ) : (
+              <div>
+                <span className="text-6xl font-extrabold tracking-wider">
+                  {highlight.homeScore} : {highlight.awayScore}
+                </span>
+                {mainResult && (
+                  <div className={`text-xl font-bold mt-1 ${resultColor(mainResult)}`}>{mainResult}</div>
+                )}
+              </div>
+            )}
+          </div>
+          {/* 원정팀 */}
+          <div className="flex items-center gap-4 flex-1 justify-end">
+            <span className="text-xl font-bold">{awayInfo.name}</span>
+            <img src={awayInfo.crest} className="w-20 h-20 object-contain" onError={e => { e.currentTarget.style.opacity = '0.3'; }} />
+          </div>
         </div>
+        <div className="text-xs text-gray-500 mt-3">{highlight.competition}</div>
       </div>
 
-      {/* ✅ 하단 4경기 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {upcomingMatches.map(match => {
-          const isScheduled = isMatchScheduled(match.utcDate);
-          const result = null; // DB 구조에 따라 필요시 수정
-
+      {/* 나머지 최대 6경기 — 2열 그리드 */}
+      <div className="grid grid-cols-2 gap-3">
+        {others.map(m => {
+          const hi = getTeamInfo(m.homeTeamId, m.homeTeam);
+          const ai = getTeamInfo(m.awayTeamId, m.awayTeam);
+          const r = getResult(m);
+          const scheduled = m.status === 'TIMED' || m.status === 'SCHEDULED';
+          const venue = getVenue(m.homeTeamId);
           return (
-            <div key={match.id} className="bg-[#2e2d2d] pt-4 pb-4 rounded-lg shadow text-sm space-y-2">
-              <div className="text-center text-gray-400 text-xs">{formatDate(match.utcDate)}</div>
-              <div className="flex justify-center items-center gap-10">
-                {homeTeamSmall(match.homeTeamId, match.homeTeam)}
-                <div className="text-center">
-                  <div className="text-2xl font-semibold">
-                    VS
-                  </div>
-                  {!isScheduled && (
-                    <div className={`text-sm font-bold mt-1 ${getResultColor(result)}`}>
-                      {result}
-                    </div>
+            <div
+              key={m.id}
+              className="bg-[#2e2d2d] rounded-lg py-4 px-3 cursor-pointer hover:bg-[#3a3939] transition-colors"
+              onClick={() => navigate(`/matches/${m.id}`)}
+            >
+              <div className="text-center text-gray-400 text-xs mb-1">{formatDate(m.utcDate)}</div>
+              {venue && (
+                <div className="text-center text-[10px] text-gray-600 mb-2 truncate">{venue}</div>
+              )}
+              <div className="flex items-center justify-center gap-2">
+                <div className="flex items-center gap-2 flex-1 justify-end">
+                  <span className="text-xs text-right line-clamp-1">{hi.name}</span>
+                  <img src={hi.crest} className="w-8 h-8 object-contain flex-shrink-0" onError={e => { e.currentTarget.style.opacity = '0.3'; }} />
+                </div>
+                <div className="text-center px-2 min-w-[52px]">
+                  {scheduled ? (
+                    <span className="text-sm font-bold text-gray-300">VS</span>
+                  ) : (
+                    <span className={`text-sm font-bold ${resultColor(r)}`}>
+                      {m.homeScore} : {m.awayScore}
+                    </span>
                   )}
                 </div>
-                {awayTeamSmall(match.awayTeamId, match.awayTeam)}
+                <div className="flex items-center gap-2 flex-1">
+                  <img src={ai.crest} className="w-8 h-8 object-contain flex-shrink-0" onError={e => { e.currentTarget.style.opacity = '0.3'; }} />
+                  <span className="text-xs line-clamp-1">{ai.name}</span>
+                </div>
               </div>
-              
             </div>
           );
         })}
       </div>
+
+      {/* 전체 경기 보기 버튼 */}
+      <button
+        onClick={() => navigate('/matches')}
+        className="w-full py-2.5 bg-[#2e2d2d] hover:bg-[#3a3939] text-gray-300 hover:text-white rounded-lg text-sm transition-colors border border-[#444]"
+      >
+        전체 경기 보기 →
+      </button>
     </div>
   );
 };
