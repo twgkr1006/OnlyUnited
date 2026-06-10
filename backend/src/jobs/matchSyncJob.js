@@ -45,7 +45,9 @@ const syncMatches = async (fullSync = false) => {
                 fetchMatches('FINISHED', season, 5),
                 fetchMatches('TIMED',    season, 10),
             ]);
-            matches = [
+            if (fin.status === 'rejected') console.error('[MATCH SYNC] FINISHED 실패:', fin.reason?.response?.status, fin.reason?.message);
+        if (tim.status === 'rejected') console.error('[MATCH SYNC] TIMED 실패:', tim.reason?.response?.status, tim.reason?.message);
+        matches = [
                 ...(fin.status === 'fulfilled' ? fin.value : []),
                 ...(tim.status === 'fulfilled' ? tim.value : []),
             ];
