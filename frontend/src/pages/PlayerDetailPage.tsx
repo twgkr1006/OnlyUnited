@@ -1391,8 +1391,8 @@ const PlayerDetailPage = () => {
   const name = db?.name ?? api?.name ?? '';
   // 정식 이름 결정: playerId 맵 → 약어 맵 → 원본 순서로 폴백
   const canonicalName: string =
-    (db?.playerId && playerIdToFullName[db.playerId as number]) ??
-    abbreviatedToFullName[name] ??
+    (db?.playerId && playerIdToFullName[db.playerId as number]) ||
+    abbreviatedToFullName[name] ||
     name;
 
   const nameKo     = playerNameKoMap[canonicalName] ?? playerNameKoMap[name] ?? name;

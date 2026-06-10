@@ -309,8 +309,8 @@ const PlayerSelector = ({
 
 function canonicalOf(p: SquadPlayer): string {
   return (p.playerId && playerIdToFullName[p.playerId])
-    ?? abbreviatedToFullName[p.name]
-    ?? p.name;
+    || abbreviatedToFullName[p.name]
+    || p.name;
 }
 
 // ── 메인 페이지 ──────────────────────────────────────────────────────────────
@@ -428,7 +428,7 @@ export default function PlayerComparePage() {
                   const maxVal = Math.max(vA ?? 0, vB ?? 0, 1);
 
                   return (
-                    <div key={key} className="px-4 py-2.5">
+                    <div key={String(key)} className="px-4 py-2.5">
                       <div className="flex items-center justify-between text-sm mb-1.5">
                         <span className={`w-20 text-right font-bold tabular-nums ${aIsWinner ? 'text-red-300' : 'text-gray-300'}`}>
                           {vA !== null ? (key === 'rating' ? Number(vA).toFixed(2) : vA.toLocaleString()) : '-'}

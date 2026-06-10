@@ -140,7 +140,7 @@ function EmailStep({ onNext }: { onNext: (email: string) => void }) {
     
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:3001/email/authnumsend', {
+      await axios.post('http://localhost:3001/email/authnumsend', {
         email: email
       }, {
         withCredentials: true
@@ -170,7 +170,7 @@ function EmailStep({ onNext }: { onNext: (email: string) => void }) {
 
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:3001/email/verifycode', {
+      await axios.post('http://localhost:3001/email/verifycode', {
         email: email,
         code: inputCode
       }, {

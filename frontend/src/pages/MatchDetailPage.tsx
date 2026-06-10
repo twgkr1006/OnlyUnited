@@ -385,7 +385,7 @@ const MatchDetailPage = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
                 </button>
-                <Logo className="h-7" />
+                <Logo />
                 <span className="text-gray-500 text-xs ml-1">{match.competition}</span>
             </header>
 
