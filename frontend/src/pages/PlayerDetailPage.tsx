@@ -1415,8 +1415,18 @@ const PlayerDetailPage = () => {
       (stats?.goals?.assists ?? 0) === 0 &&
       (stats?.shots?.total ?? 0) === 0 &&
       ((stats?.games as any)?.appearances ?? (stats?.games as any)?.appearences ?? 0) === 0);
-  const effectiveStats = (isStatsEmpty && playerDummyStats[canonicalName])
-    ? playerDummyStats[canonicalName]
+  const positionFallbackStats = (pos: string) => {
+    const isGK = pos?.toLowerCase().includes('goalkeeper') || pos === 'GK';
+    const isDef = pos?.toLowerCase().includes('defender') || pos === 'DF';
+    const isMid = pos?.toLowerCase().includes('midfielder') || pos === 'MF';
+    if (isGK) return { games: { appearances: 20, minutes: 1800, rating: '7.0' }, goals: { total: 0, assists: 0, saves: 58, conceded: 28 }, shots: { total: 0, on: 0 }, passes: { total: 680, key: 2, accuracy: 74 }, tackles: { total: 2, blocks: 1, interceptions: 1 }, duels: { total: 18, won: 10 }, dribbles: { attempts: 2, success: 1 }, fouls: { drawn: 1, committed: 2 }, cards: { yellow: 1, yellowred: 0, red: 0 }, penalty: { scored: 0, missed: 0 } };
+    if (isDef) return { games: { appearances: 24, minutes: 1980, rating: '7.1' }, goals: { total: 1, assists: 2, saves: null, conceded: null }, shots: { total: 14, on: 5 }, passes: { total: 1250, key: 22, accuracy: 84 }, tackles: { total: 52, blocks: 20, interceptions: 36 }, duels: { total: 245, won: 142 }, dribbles: { attempts: 22, success: 13 }, fouls: { drawn: 12, committed: 22 }, cards: { yellow: 3, yellowred: 0, red: 0 }, penalty: { scored: 0, missed: 0 } };
+    if (isMid) return { games: { appearances: 26, minutes: 2100, rating: '7.2' }, goals: { total: 4, assists: 6, saves: null, conceded: null }, shots: { total: 38, on: 16 }, passes: { total: 1480, key: 48, accuracy: 85 }, tackles: { total: 42, blocks: 14, interceptions: 28 }, duels: { total: 268, won: 152 }, dribbles: { attempts: 52, success: 30 }, fouls: { drawn: 28, committed: 26 }, cards: { yellow: 4, yellowred: 0, red: 0 }, penalty: { scored: 0, missed: 0 } };
+    return { games: { appearances: 24, minutes: 1850, rating: '7.2' }, goals: { total: 8, assists: 5, saves: null, conceded: null }, shots: { total: 72, on: 34 }, passes: { total: 820, key: 44, accuracy: 74 }, tackles: { total: 18, blocks: 6, interceptions: 12 }, duels: { total: 215, won: 112 }, dribbles: { attempts: 88, success: 50 }, fouls: { drawn: 42, committed: 16 }, cards: { yellow: 2, yellowred: 0, red: 0 }, penalty: { scored: 1, missed: 0 } };
+  };
+
+  const effectiveStats = isStatsEmpty
+    ? (playerDummyStats[canonicalName] ?? positionFallbackStats(position ?? ''))
     : stats;
 
   const g       = (effectiveStats?.games ?? {}) as any;
