@@ -3,6 +3,7 @@ const cron = require('node-cron');
 const { upsertMatch } = require('../service/matchService');
 
 const MAN_UTD_TEAM_ID = 66;
+const COMPETITIONS = ['PL', 'CL', 'EL', 'FAC', 'ELC'];
 const API_HEADERS = () => ({ 'X-Auth-Token': process.env.FOOTBALL_DATA_KEY });
 
 function getCurrentSeason() {
@@ -11,47 +12,38 @@ function getCurrentSeason() {
     return month >= 8 ? now.getFullYear() : now.getFullYear() - 1;
 }
 
-async function fetchMatches(status, season, limit = 50) {
-    const { data } = await axios.get(
-        `https://api.football-data.org/v4/teams/${MAN_UTD_TEAM_ID}/matches`,
-        {
-            headers: API_HEADERS(),
-            params: { season, status, limit },
-            timeout: 10000,
+async function fetchCompetitionMatches(competition, season) {
+    try {
+        const { data } = await axios.get(
+            `https://api.football-data.org/v4/competitions/${competition}/matches`,
+            { headers: API_HEADERS(), params: { season }, timeout: 15000 }
+        );
+        const all = data.matches ?? [];
+        return all.filter(m => m.homeTeam?.id === MAN_UTD_TEAM_ID || m.awayTeam?.id === MAN_UTD_TEAM_ID);
+    } catch (e) {
+        if (e?.response?.status !== 403) {
+            console.warn(`[MATCH SYNC] ${competition} 실패:`, e?.response?.status, e.message);
         }
-    );
-    return data.matches ?? [];
+        return [];
+    }
 }
 
-const syncMatches = async (fullSync = false) => {
+const syncMatches = async () => {
     try {
         const season = getCurrentSeason();
 
-        let matches = [];
+        const results = await Promise.allSettled(
+            COMPETITIONS.map(c => fetchCompetitionMatches(c, season))
+        );
+        let matches = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
 
-        if (fullSync) {
-            // 시즌 전체 경기 가져오기 (최초 1회 또는 수동)
-            const [fin, tim] = await Promise.allSettled([
-                fetchMatches('FINISHED', season, 50),
-                fetchMatches('TIMED',    season, 50),
-            ]);
-            matches = [
-                ...(fin.status === 'fulfilled' ? fin.value : []),
-                ...(tim.status === 'fulfilled' ? tim.value : []),
-            ];
-        } else {
-            // 정기 동기화: 최근 완료 5 + 예정 10
-            const [fin, tim] = await Promise.allSettled([
-                fetchMatches('FINISHED', season, 5),
-                fetchMatches('TIMED',    season, 10),
-            ]);
-            if (fin.status === 'rejected') console.error('[MATCH SYNC] FINISHED 실패:', fin.reason?.response?.status, fin.reason?.message);
-        if (tim.status === 'rejected') console.error('[MATCH SYNC] TIMED 실패:', tim.reason?.response?.status, tim.reason?.message);
-        matches = [
-                ...(fin.status === 'fulfilled' ? fin.value : []),
-                ...(tim.status === 'fulfilled' ? tim.value : []),
-            ];
-        }
+        // 중복 제거
+        const seen = new Set();
+        matches = matches.filter(m => {
+            if (seen.has(m.id)) return false;
+            seen.add(m.id);
+            return true;
+        });
 
         if (matches.length === 0) {
             console.warn(`[MATCH SYNC] season=${season} 경기 없음`);
@@ -81,9 +73,9 @@ const syncMatches = async (fullSync = false) => {
 };
 
 // 6시간마다 정기 동기화
-cron.schedule('0 */6 * * *', () => syncMatches(false));
+cron.schedule('0 */6 * * *', syncMatches);
 
-// 서버 시작 시 전체 동기화
-syncMatches(true);
+// 서버 시작 시 실행
+syncMatches();
 
 module.exports = { syncMatches };
