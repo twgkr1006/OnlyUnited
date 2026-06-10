@@ -19,7 +19,7 @@ require('./jobs/newsSyncJob');
 require('./jobs/playerSyncJob');
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 app.use(cors({
     origin: (origin, callback) => {
@@ -53,6 +53,8 @@ app.get('/', (req, res) => {
     res.send('server running!');
 });
 
-app.listen(PORT, () => {
-    console.log(`✅ Server http://localhost:${PORT} at Running ✅`);
+app.get('/', (req, res) => res.json({ status: 'ok' }));
+
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ Server running on port ${PORT}`);
 });
