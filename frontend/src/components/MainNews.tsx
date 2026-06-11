@@ -36,6 +36,44 @@ function extractPress(title: string, pressName?: string) {
     return match ? match[1].trim() : 'Google News';
 }
 
+const DEFAULT_NEWS_IMAGE = '/logo.png';
+
+function pickFeatured(list: NewsItem[]) {
+    return list.find(n => n.imageUrl) ?? list[0];
+}
+
+function NewsThumbnail({
+    item,
+    variant,
+}: {
+    item: NewsItem;
+    variant: 'featured' | 'list';
+}) {
+    const [failed, setFailed] = useState(false);
+    const title = cleanTitle(item.title);
+    const src = !failed && item.imageUrl ? item.imageUrl : DEFAULT_NEWS_IMAGE;
+
+    if (variant === 'featured') {
+        return (
+            <img
+                src={src}
+                alt={title}
+                className="w-full h-52 object-cover group-hover:scale-105 transition-transform duration-300"
+                onError={() => setFailed(true)}
+            />
+        );
+    }
+
+    return (
+        <img
+            src={src}
+            alt={title}
+            className="w-16 h-14 object-cover rounded-lg flex-shrink-0 bg-[#1a1a1a]"
+            onError={() => setFailed(true)}
+        />
+    );
+}
+
 const MainNews = () => {
     const navigate = useNavigate();
     const [newsList, setNewsList] = useState<NewsItem[]>([]);
@@ -82,8 +120,8 @@ const MainNews = () => {
         );
     }
 
-    const featured = newsList[0];
-    const rest = newsList.slice(1);
+    const featured = pickFeatured(newsList);
+    const rest = newsList.filter(n => n.id !== featured.id);
 
     return (
         <div>
@@ -103,43 +141,25 @@ const MainNews = () => {
                     href={featured.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="md:col-span-2 group relative rounded-xl overflow-hidden bg-[#2e2d2d] block"
-                    style={{ minHeight: '200px' }}
+                    className="md:col-span-2 group relative rounded-xl overflow-hidden bg-[#2e2d2d] block min-h-[200px]"
                 >
-                    {featured.imageUrl ? (
-                        <>
-                            <img
-                                src={featured.imageUrl}
-                                alt={cleanTitle(featured.title)}
-                                className="w-full h-52 object-cover group-hover:scale-105 transition-transform duration-300"
-                                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                            />
-                            {/* 이미지 위 그라디언트 오버레이 */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                            <div className="absolute bottom-0 left-0 right-0 p-4">
-                                <div className="flex items-center gap-2 mb-1.5">
-                                    <span className="text-xs bg-red-700 text-white px-2 py-0.5 rounded font-medium">헤드라인</span>
-                                    <span className="text-gray-300 text-xs">{extractPress(featured.title, featured.pressName)}</span>
-                                    {featured.publishedAt && (
-                                        <span className="text-gray-400 text-xs">· {formatDate(featured.publishedAt)}</span>
-                                    )}
-                                </div>
-                                <h3 className="text-white font-semibold text-sm leading-snug line-clamp-2 group-hover:text-red-300 transition-colors">
-                                    {cleanTitle(featured.title)}
-                                </h3>
-                                {featured.summary && (
-                                    <p className="text-gray-300 text-xs mt-1 line-clamp-2">{featured.summary}</p>
-                                )}
-                            </div>
-                        </>
-                    ) : (
-                        <div className="p-4 h-full flex flex-col justify-end min-h-[200px] bg-gradient-to-b from-[#3a3939] to-[#2e2d2d]">
-                            <span className="text-xs bg-red-700 text-white px-2 py-0.5 rounded font-medium mb-2 w-fit">헤드라인</span>
-                            <h3 className="text-white font-semibold text-sm leading-snug group-hover:text-red-300 transition-colors">
-                                {cleanTitle(featured.title)}
-                            </h3>
+                    <NewsThumbnail item={featured} variant="featured" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-4">
+                        <div className="flex items-center gap-2 mb-1.5">
+                            <span className="text-xs bg-red-700 text-white px-2 py-0.5 rounded font-medium">헤드라인</span>
+                            <span className="text-gray-300 text-xs">{extractPress(featured.title, featured.pressName)}</span>
+                            {featured.publishedAt && (
+                                <span className="text-gray-400 text-xs">· {formatDate(featured.publishedAt)}</span>
+                            )}
                         </div>
-                    )}
+                        <h3 className="text-white font-semibold text-sm leading-snug line-clamp-2 group-hover:text-red-300 transition-colors">
+                            {cleanTitle(featured.title)}
+                        </h3>
+                        {featured.summary && (
+                            <p className="text-gray-300 text-xs mt-1 line-clamp-2">{featured.summary}</p>
+                        )}
+                    </div>
                 </a>
 
                 {/* 나머지 뉴스 목록 */}
@@ -155,14 +175,7 @@ const MainNews = () => {
                                 rel="noopener noreferrer"
                                 className="group bg-[#2e2d2d] hover:bg-[#3a3939] rounded-xl p-3 flex gap-3 transition-colors"
                             >
-                                {news.imageUrl && (
-                                    <img
-                                        src={news.imageUrl}
-                                        alt={title}
-                                        className="w-16 h-14 object-cover rounded-lg flex-shrink-0"
-                                        onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                                    />
-                                )}
+                                <NewsThumbnail item={news} variant="list" />
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-1.5 mb-1">
                                         <span className="text-gray-500 text-xs truncate">{press}</span>

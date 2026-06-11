@@ -1,7 +1,7 @@
 const axios = require('axios');
 const cron = require('node-cron');
 const xml2js = require('xml2js');
-const { upsertNews } = require('../service/newsService');
+const { upsertNews, refreshMissingImages } = require('../service/newsService');
 
 // 맨유 한국어 + 영문 뉴스 RSS
 const RSS_URLS = [
@@ -41,7 +41,9 @@ const syncNews = async () => {
                     continue;
                 }
 
-                const saved = await upsertNews({ title, url, publishedAt });
+                const rssSource = item.source?.[0]?._ || item.source?.[0] || null;
+
+                const saved = await upsertNews({ title, url, publishedAt, rssSource });
                 if (saved) totalSaved++;
             }
 
@@ -52,6 +54,7 @@ const syncNews = async () => {
     }
 
     console.log(`📰 이번 동기화에서 새로 저장된 뉴스: ${totalSaved}건`);
+    await refreshMissingImages(15);
 };
 
 // 매 30분마다 실행 + 서버 시작 시 1회
